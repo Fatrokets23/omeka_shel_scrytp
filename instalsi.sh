@@ -47,38 +47,22 @@ sudo pacman -Syu --noconfirm
 sudo pacman -S --needed --noconfirm apache mariadb php php-fpm php-gd php-intl unzip wget
 
 echo "=== [2/7] Initializing & Starting MariaDB ==="
-# Buat user & group mysql jika belum ada
-sudo groupadd -g 89 mysql 2>/dev/null || true
-sudo useradd -u 89 -g mysql -d /var/lib/mysql -s /bin/false mysql 2>/dev/null || true
-
-# Matikan service jika sempat running setengah jalan
-sudo systemctl stop mariadb 2>/dev/null || true
-
-# Bersihkan direktori & set permission yang tepat
-sudo rm -rf /var/lib/mysql /run/mysqld
-sudo mkdir -p /var/lib/mysql /run/mysqld
-sudo chown -R mysql:mysql /var/lib/mysql /run/mysqld
+sudo mkdir -p /var/lib/mysql
+sudo chown -R mysql:mysql /var/lib/mysql
 sudo chmod 700 /var/lib/mysql
 
-# Inisialisasi Database
-sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+if [ ! -d "/var/lib/mysql/mysql" ]; then
+    sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+fi
 
-# Start service MariaDB
 sudo systemctl enable --now mariadb
-
-# Symlink socket untuk mengantisipasi PHP MySQLi
-sudo ln -sf /run/mysqld/mysqld.sock /tmp/mysql.sock 2>/dev/null || true
-sudo ln -sf /run/mysqld/mysqld.sock /var/lib/mysql/mysql.sock 2>/dev/null || true
 
 echo "=== [3/7] Setting up Database & User ==="
 sudo mariadb -u root <<EOF
 CREATE DATABASE IF NOT EXISTS omeka_db;
 CREATE USER IF NOT EXISTS 'omeka_user'@'localhost' IDENTIFIED BY '$DB_PASS';
-CREATE USER IF NOT EXISTS 'omeka_user'@'127.0.0.1' IDENTIFIED BY '$DB_PASS';
 ALTER USER 'omeka_user'@'localhost' IDENTIFIED BY '$DB_PASS';
-ALTER USER 'omeka_user'@'127.0.0.1' IDENTIFIED BY '$DB_PASS';
 GRANT ALL PRIVILEGES ON omeka_db.* TO 'omeka_user'@'localhost';
-GRANT ALL PRIVILEGES ON omeka_db.* TO 'omeka_user'@'127.0.0.1';
 FLUSH PRIVILEGES;
 EOF
 
@@ -90,16 +74,16 @@ sudo mv /tmp/omeka-3.2.1 /srv/http/omeka
 rm -f /tmp/omeka.zip
 
 echo "=== [5/7] Configuring db.ini & PHP ==="
-# Gunakan 127.0.0.1 (TCP port 3306) untuk menghindari socket error pada Zend
+# Konfigurasi db.ini dengan password dinamis
 sudo bash -c "cat <<EOF > /srv/http/omeka/db.ini
 [database]
-host = \"127.0.0.1\"
+host = \"localhost\"
 username = \"omeka_user\"
 password = \"$DB_PASS\"
 dbname = \"omeka_db\"
 prefix = \"omeka_\"
 charset = \"utf8\"
-port = \"3306\"
+; port = \"\"
 EOF"
 
 # Aktifkan ekstensi di php.ini
@@ -164,7 +148,7 @@ sudo chmod 755 /srv/http
 sudo chown -R http:http /srv/http/omeka
 sudo chmod -R 755 /srv/http/omeka
 
-sudo systemctl restart php-fpm httpd mariadb
+sudo systemctl restart php-fpm httpd
 
 echo ""
 echo "================================================="
