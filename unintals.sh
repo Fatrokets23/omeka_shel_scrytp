@@ -21,7 +21,7 @@ echo "=== [2/5] Purging Packages & Unneeded Dependencies ==="
 # Hapus paket utama beserta dependency
 sudo pacman -Rns --noconfirm apache mariadb php php-fpm php-gd php-intl unzip wget 2>/dev/null || true
 
-# Hapus orphan packages (paket gantung yang udah gak dipakai)
+# Hapus orphan packages
 ORPHANS=$(pacman -Qdtq 2>/dev/null || true)
 if [ -n "$ORPHANS" ]; then
     sudo pacman -Rns --noconfirm $ORPHANS 2>/dev/null || true
@@ -43,7 +43,7 @@ sudo rm -rf /etc/php-fpm.d
 sudo rm -rf /etc/php-fpm.conf*
 sudo rm -rf /etc/my.cnf*
 sudo rm -rf /etc/mysql
-u
+
 # Data Database, Socket, & Run State
 sudo rm -rf /var/lib/mysql
 sudo rm -rf /run/mysqld
@@ -59,7 +59,7 @@ sudo rm -rf /var/log/php-fpm.log*
 # Temp Files & Symlinks Socket
 sudo rm -f /tmp/omeka*.zip
 sudo rm -rf /tmp/omeka*
-sudo rm -f /tmp/mysql.socku
+sudo rm -f /tmp/mysql.sock
 
 echo "=== [5/5] Cleaning Pacman Cache ==="
 sudo pacman -Sc --noconfirm
