@@ -47,19 +47,28 @@ sudo pacman -Syu --noconfirm
 sudo pacman -S --needed --noconfirm apache mariadb php php-fpm php-gd php-intl unzip wget
 
 echo "=== [2/7] Initializing & Starting MariaDB ==="
-# Buat user & group mysql jika belum ada di sistem
+# Buat user & group mysql jika belum ada
 sudo groupadd -g 89 mysql 2>/dev/null || true
 sudo useradd -u 89 -g mysql -d /var/lib/mysql -s /bin/false mysql 2>/dev/null || true
 
-sudo mkdir -p /var/lib/mysql
-sudo chown -R mysql:mysql /var/lib/mysql
-sudo chmod 700 /var/lib/mysql
+# Pastikan service mariadb mati dulu sebelum setup
+sudo systemctl stop mariadb 2>/dev/null || true
 
+# Jika database belum ada, bersihkan & inisialisasi fresh
 if [ ! -d "/var/lib/mysql/mysql" ]; then
+    sudo rm -rf /var/lib/mysql
+    sudo mkdir -p /var/lib/mysql
+    sudo chown -R mysql:mysql /var/lib/mysql
+    sudo chmod 700 /var/lib/mysql
     sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
 fi
 
+# Fix permission lagi untuk memastikan
+sudo chown -R mysql:mysql /var/lib/mysql
+
+# Start service
 sudo systemctl enable --now mariadb
+
 echo "=== [3/7] Setting up Database & User ==="
 sudo mariadb -u root <<EOF
 CREATE DATABASE IF NOT EXISTS omeka_db;
