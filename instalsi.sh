@@ -51,28 +51,23 @@ echo "=== [2/7] Initializing & Starting MariaDB ==="
 sudo groupadd -g 89 mysql 2>/dev/null || true
 sudo useradd -u 89 -g mysql -d /var/lib/mysql -s /bin/false mysql 2>/dev/null || true
 
-# Pastikan service mariadb mati dulu sebelum setup
+# Matikan service jika sempat running setengah jalan
 sudo systemctl stop mariadb 2>/dev/null || true
 
-# Jika database belum ada, bersihkan & inisialisasi fresh
-if [ ! -d "/var/lib/mysql/mysql" ]; then
-    sudo rm -rf /var/lib/mysql
-    sudo mkdir -p /var/lib/mysql
-    sudo chown -R mysql:mysql /var/lib/mysql
-    sudo chmod 700 /var/lib/mysql
-    sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
-fi
-
-# Fix permission & buat folder socket run
-sudo mkdir -p /run/mysqld
+# Pastikan direktori bersih & permission-nya tepat
+sudo rm -rf /var/lib/mysql /run/mysqld
+sudo mkdir -p /var/lib/mysql /run/mysqld
 sudo chown -R mysql:mysql /var/lib/mysql /run/mysqld
+sudo chmod 700 /var/lib/mysql
+
+# Inisialisasi DB
+sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
 
 # Start service MariaDB
 sudo systemctl enable --now mariadb
 
-# Bikin symlink socket biar PHP gak kebingungan nyari lokasi socket
+# Symlink socket agar terhindar dari socket missing error di PHP
 sudo ln -sf /run/mysqld/mysqld.sock /tmp/mysql.sock 2>/dev/null || true
-sudo ln -sf /run/mysqld/mysqld.sock /var/lib/mysql/mysql.sock 2>/dev/null || true
 
 echo "=== [3/7] Setting up Database & User ==="
 sudo mariadb -u root <<EOF
